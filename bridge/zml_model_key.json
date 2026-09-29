@@ -1,0 +1,22 @@
+{
+  "_用法": "放到任意目录，在 ZML_LLM 模型加载器V2 的 config_folder 填该目录，preset_name 填下面某个 name。key 只存在本文件、不进工作流，所以分享工作流是安全的。",
+  "_key从哪拿": "API 密钥：在你所用服务的控制台或面板里获取。key 只存在本文件、不进工作流，所以分享工作流是安全的。",
+  "_两条通道区别": {
+    "SKILL-桥": "经桥转发（127.0.0.1:8899）。system_prompt 只写一句场景声明，如「krea2 扩写」，规则由桥从 skill 目录动态取。换底模只改那一句。需要先启动 启动桥.bat。",
+    "直连-*": "直连任意 OpenAI 兼容服务。system_prompt 要粘静态规则全文（参考/ 目录里的 krea2_流水线扩写_system_prompt.txt 是一份样例）。不依赖桥，但换底模要重写规则。"
+  },
+  "presets": [
+    {
+      "name": "SKILL-桥",
+      "url": "http://127.0.0.1:8899/v1",
+      "key": "any",
+      "model": "skill-bridge"
+    },
+    {
+      "name": "直连-示例",
+      "url": "https://api.deepseek.com/v1",
+      "key": "REPLACE_ME",
+      "model": "deepseek-chat"
+    }
+  ]
+}

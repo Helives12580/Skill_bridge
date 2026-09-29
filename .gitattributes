@@ -1,0 +1,26 @@
+# 统一按内容判断文本/二进制
+* text=auto
+
+# 源码与文档：仓库里存 LF，检出时不动
+*.py   text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+*.txt  text eol=lf
+*.yml  text eol=lf
+
+# Windows 批处理：必须是 CRLF。
+# cmd.exe 按字节偏移解析 bat，LF 换行会导致行首字符被吞、命令碎片化执行
+# （典型症状是窗口一闪而过，或者冒出一堆「'xx' 不是内部或外部命令」）。
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 二进制，别碰
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.webp binary
+*.gif  binary
+*.ico  binary
+*.safetensors binary
+*.pt   binary
+*.pth  binary
