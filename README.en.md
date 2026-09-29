@@ -116,7 +116,7 @@ you don't need to write anything in Chinese.**
 
 > **Write just that one word — do not paste the rules.** Pasting the full rules is what
 > "direct mode" needs, which is a different setup; see
-> `参考/krea2_流水线扩写_system_prompt.txt` for an example of that approach.
+> `reference/krea2_pipeline_system_prompt.txt` for an example of that approach.
 
 **Switching base models means changing only this line.** The rules live in skill files.
 
@@ -159,20 +159,20 @@ For the full plugin/node list, see "Plugins used" at the top.
 skill-bridge/
 ├─ README.md                      Chinese docs (this file's counterpart: README.en.md)
 ├─ README.en.md                   English docs
-├─ 把我交给dsh.md                  DSH hand-off, Chinese
+├─ deploy-with-dsh.zh.md                  DSH hand-off, Chinese
 ├─ deploy-with-dsh.md             DSH hand-off, English
 ├─ LICENSE                        MIT
 ├─ .gitignore
 ├─ bridge/
 │  ├─ dsh_skill_bridge.py         the bridge itself (standard library only)
 │  ├─ bridge_config.json          upstream URL, key, scene routes, shared override layer
-│  ├─ 启动桥.bat                  double-click to start (Windows)
+│  ├─ start-bridge.bat                  double-click to start (Windows)
 │  └─ zml_model_key.json          ZML preset file (holds the API key)
 ├─ plugins/
 │  └─ comfyui-anima-validate-node/  the "Anima 提示词校验" node
-└─ 参考/                           for people who prefer not to use the bridge
-   ├─ krea2_流水线扩写_system_prompt.txt  static rules for direct mode
-   └─ krea2流水线接线图.md                Krea2 Control wiring reference (Chinese)
+└─ reference/                           for people who prefer not to use the bridge
+   ├─ krea2_pipeline_system_prompt.txt  static rules for direct mode
+   └─ krea2_wiring.md                Krea2 Control wiring reference (Chinese)
 ```
 
 > ⚠️ **No skill content is bundled.** The rules come from `anima-tagger` and
@@ -212,7 +212,7 @@ Everything else is documented inline and works untouched.
 
 ### Step 3 — start it, then wire up ComfyUI
 
-1. Double-click `bridge/启动桥.bat`. When you see
+1. Double-click `bridge/start-bridge.bat`. When you see
    `[bridge] ready http://127.0.0.1:8899/v1`, it's up (**leave the window open**).
 2. Put `zml_model_key.json` in any folder, fill in your key, and in ComfyUI:
    - `ZML_LLM 模型加载器V2` → `config_folder` = **that folder**
@@ -439,7 +439,7 @@ Check that `json_strategy` is set to `仅提示词`. Also note that `bridge_conf
 (wrapping output in a code block, asking for confirmation) — don't delete it.
 
 **Double-clicking the start script flashes and vanishes**
-The `启动桥.bat` here is already **pure ASCII with CRLF line endings**, so this shouldn't
+The `start-bridge.bat` here is already **pure ASCII with CRLF line endings**, so this shouldn't
 happen. If you edited it yourself, two rules: **never put non-ASCII characters in a `.bat`**
 (cmd decodes it with the system code page and blows up), and **line endings must be CRLF**.
 

@@ -7,7 +7,7 @@
 
 > 🌐 **English docs**: [README.en.md](README.en.md) · [deploy-with-dsh.md](deploy-with-dsh.md)
 
-> 🚀 **如果你在用 DSH**：不用手动装。把 `把我交给dsh.md` 的完整路径发给你的 DSH Agent，
+> 🚀 **如果你在用 DSH**：不用手动装。把 `deploy-with-dsh.zh.md` 的完整路径发给你的 DSH Agent，
 > 说一句「按这个文件帮我装好」，它会自己探环境、识别可用的 LLM 服务、写配置、跑通实测再回报。
 
 ---
@@ -102,7 +102,7 @@ ZML 的 `系统提示词` 节点是**静态**的：你把规则全文写进去�
 | 留空 | 走默认路由 |
 
 > **只写这一句，不要把规则全文粘进去。** 粘全文是「直连模式」才需要的做法——那是另一个方案，
-> 详见 `参考/` 目录里的 `krea2_流水线扩写_system_prompt.txt`。
+> 详见 `reference/` 目录里的 `krea2_pipeline_system_prompt.txt`。
 
 **换底模时只改这一句**，规则本身在 skill 文件里，一个字都不用动。
 
@@ -141,20 +141,20 @@ ZML 的 `系统提示词` 节点是**静态**的：你把规则全文写进去�
 skill-bridge/
 ├─ README.md                      中文说明（本文件）
 ├─ README.en.md                   英文说明
-├─ 把我交给dsh.md                 交给 DSH Agent 自动部署（中文，可选）
+├─ deploy-with-dsh.zh.md                 交给 DSH Agent 自动部署（中文，可选）
 ├─ deploy-with-dsh.md             同上，英文版
 ├─ LICENSE                        MIT
 ├─ .gitignore
 ├─ bridge/
 │  ├─ dsh_skill_bridge.py         桥本体（纯标准库）
 │  ├─ bridge_config.json          配置：上游地址、密钥、场景路由、通用覆盖规则
-│  ├─ 启动桥.bat                  双击启动（Windows）
+│  ├─ start-bridge.bat                  双击启动（Windows）
 │  └─ zml_model_key.json          ZML 节点的预设文件（填密钥用）
 ├─ plugins/
 │  └─ comfyui-anima-validate-node/  「Anima 提示词校验」节点
-└─ 参考/                           不想用桥的话看这里
-   ├─ krea2_流水线扩写_system_prompt.txt  直连模式的静态规则全文
-   └─ krea2流水线接线图.md                Krea2 Control 那套的接线参考
+└─ reference/                           不想用桥的话看这里
+   ├─ krea2_pipeline_system_prompt.txt  直连模式的静态规则全文
+   └─ krea2_wiring.md                Krea2 Control 那套的接线参考
 ```
 
 > ⚠️ **本仓库不含 skill 本体。** 规则内容来自 `anima-tagger` 与 `anima-n-prompt` 两个 skill，
@@ -194,7 +194,7 @@ C:\Users\<你的用户名>\.dsh\skills\
 
 ### 第 3 步：启动 + 接入 ComfyUI
 
-1. 双击 `bridge/启动桥.bat`，看到 `[bridge] ready http://127.0.0.1:8899/v1` 就成了（**窗口保持开着**）
+1. 双击 `bridge/start-bridge.bat`，看到 `[bridge] ready http://127.0.0.1:8899/v1` 就成了（**窗口保持开着**）
 2. 把 `zml_model_key.json` 放到任意目录，填上你的密钥，然后在 ComfyUI 里：
    - `ZML_LLM 模型加载器V2` 的 `config_folder` 填**那个目录**
    - `preset_name` 选 **`SKILL-桥`**
@@ -387,7 +387,7 @@ CN 图生图抽卡时，常出现**同一张图 + 同一串 tag、只换随机�
 检查 `json_strategy` 是否选了「仅提示词」。另外 `bridge_config.json` 里有一段 `pipeline_overrides`，专门压制「skill 原文要求打包进代码块」这类对话交付习惯——不要删它。
 
 **Q：双击启动脚本一闪而过**
-本包里的 `启动桥.bat` 已是 **纯 ASCII + CRLF** 换行，不会再有这个问题。如果你自己改过它，注意两点：**别在 bat 里写中文**（cmd 按系统代码页解析会崩），**换行必须是 CRLF**。
+本包里的 `start-bridge.bat` 已是 **纯 ASCII + CRLF** 换行，不会再有这个问题。如果你自己改过它，注意两点：**别在 bat 里写中文**（cmd 按系统代码页解析会崩），**换行必须是 CRLF**。
 
 **Q：报 502，说「目标端口没有在监听（WinError 10061）」**
 上游网关没启动，或者 `bridge_config.json` 里的 `base_url` 写错了。这不是桥的问题——

@@ -6,7 +6,7 @@
 
 Then let it work. What follows is the brief it reads.
 
-> 中文版见 [把我交给dsh.md](把我交给dsh.md)。
+> 中文版见 [deploy-with-dsh.zh.md](deploy-with-dsh.zh.md)。
 
 ---
 ---
@@ -225,6 +225,6 @@ Keep it structured; don't paste walls of log:
   Get-NetTCPConnection -LocalPort 8899 -State Listen | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
   ```
 - **If the user prefers not to use the bridge**, point them at the direct-mode approach in
-  `README.md`; the full static rules live in `参考/krea2_流水线扩写_system_prompt.txt`.
+  `README.md`; the full static rules live in `reference/krea2_pipeline_system_prompt.txt`.
 - For anything this brief doesn't cover, read `bridge/bridge.log` and `README.md` first —
   between them they explain essentially every symptom.

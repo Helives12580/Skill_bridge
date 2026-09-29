@@ -2,7 +2,7 @@
 
 **给用户的话**：把本文件的完整路径发给你正在用的 DSH Agent，然后说一句：
 
-> 按 `把我交给dsh.md` 帮我把 skill-bridge 装好
+> 按 `deploy-with-dsh.zh.md` 帮我把 skill-bridge 装好
 
 剩下的交给它。下面是写给它的执行说明。
 
@@ -208,5 +208,5 @@ Get-Content "<包路径>\bridge\bridge.log" -Tail 8 -Encoding UTF8
   ```powershell
   Get-NetTCPConnection -LocalPort 8899 -State Listen | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
   ```
-- **用户不想用桥**的话，看 `README.md` 的直连方案，规则全文在 `参考/krea2_流水线扩写_system_prompt.txt`。
+- **用户不想用桥**的话，看 `README.md` 的直连方案，规则全文在 `reference/krea2_pipeline_system_prompt.txt`。
 - 遇到本说明没覆盖的问题，先读 `bridge/bridge.log` 和 `README.md`，两者加起来基本能解释所有现象。

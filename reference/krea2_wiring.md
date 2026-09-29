@@ -92,13 +92,12 @@ JoinStringMulti.string_6 ──┬──→ ShowText（预览用，不影响主�
 
 ```
 ┌────────────────────────────┐
-│ ZML_LLM 模型加载器V2        │          ┌────────────────────────────┐
-│  preset_name  = WB-极致     │          │ ZML_LLM 系统提示词          │
-│  config_folder= (放 zml_model_key.json 的目录)│          │  system_prompt =            │
-│  (放 zml_model_key.json)    │          │  krea2_流水线扩写_          │
-└──────────────┬─────────────┘          │  system_prompt.txt 全文     │
-               │ model_config           └──────────────┬─────────────┘
-               │                                       │ system_prompt
+│ ZML_LLM 模型加载器V2        │          │ ZML_LLM 系统提示词          │
+│  preset_name = SKILL-桥     │          │  system_prompt =            │
+│  config_folder = 放         │          │   规则全文                  │
+│   zml_model_key.json 的目录 │          │   （直连模式才需要）        │
+└──────────────┬─────────────┘          └──────────────┬─────────────┘
+               │ model_config                          │ system_prompt
                └──────────────┬────────────────────────┘
                               ▼
                     ZML_LLM_Chat
@@ -107,7 +106,7 @@ JoinStringMulti.string_6 ──┬──→ ShowText（预览用，不影响主�
                ┌──────────────┴─────────────┐
                │ ZML_LLM 参数设置            │
                │  温度       = 0.7 ~ 0.9     │
-               │  最大Token数 = 4096  ★必改   │
+               │  最大Token数 = 8192  ★必改  │
                │  核采样     = 0.9           │
                │  超时时间   = 300           │
                └────────────────────────────┘
@@ -119,12 +118,12 @@ JoinStringMulti.string_6 ──┬──→ ShowText（预览用，不影响主�
 
 | 节点 | 参数 | 值 | 说明 |
 |---|---|---|---|
-| **ZML_LLM 模型加载器V2** | `preset_name` | `WB-极致` | 对应 json 里的 name |
+| **ZML_LLM 模型加载器V2** | `preset_name` | `SKILL-桥` | 对应 json 里的 name |
 | | `config_folder` | 放 `zml_model_key.json` 的目录 | 密钥只在这里读，不进工作流 |
 | | `model_override` | 留空 | |
-| **ZML_LLM 系统提示词** | `system_prompt` | 流水线扩写规则全文 | 见 `krea2_流水线扩写_system_prompt.txt` |
+| **ZML_LLM 系统提示词** | `system_prompt` | 流水线扩写规则全文 | 见 `krea2_pipeline_system_prompt.txt` |
 | **ZML_LLM 参数设置** | `温度` | 0.7~0.9 | 太低每次扩写雷同 |
-| | `最大Token数` | **4096** | 默认值会截断长稿 |
+| | `最大Token数` | **8192** | 推理模型的思考会吃掉大量 token，设小了正文会被压成空 |
 | | `核采样` | 0.9 | |
 | | `超时时间` | 300 | 扩写耗时长 |
 | **ZML_LLM 对话主程序** | `json_strategy` | **`仅提示词 (不强求)`** | 否则会自动追加"按 JSON 输出" |
