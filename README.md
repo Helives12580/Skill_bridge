@@ -22,8 +22,8 @@
 | **comfyui-anima-validate-node** | 可选 | `Anima 提示词校验` 节点：确定性校验 tag（规范化 / 上位词折叠 / 槽位冲突 / 长度）＋ 审核拒绝检测 | 本仓库 `plugins/` 目录 |
 | **[ComfyUI-NL-PromptForge](https://github.com/Helives12580/ComfyUI-NL-PromptForge)** | 可选 | `NL Prompt Forge 黑名单过滤` 节点：兜底清掉意外漏出的代码块标记。本仓库校验节点的**审核拒绝检测判据**（双重命中词表 + 标点折叠）参考了该插件的实现 | <https://github.com/Helives12580/ComfyUI-NL-PromptForge> |
 
-> **本仓库不包含任何 skill 本体。** 规则内容来自 `anima-tagger` 与 `anima-n-prompt` 两个 skill，
-> 需要你自己准备（见下节「用到哪些 skill」）。
+> **本仓库不含 skill**，skill 需要自行安装并调用；规则内容不在仓库里。装好之后按第四节把
+> `bridge_config.json` 的 `routes` 指向你自己的 skill 即可。
 
 ### 链路
 
@@ -92,6 +92,8 @@ ZML 的 `系统提示词` 节点是**静态**的：你把规则全文写进去�
 
 `ZML_LLM 系统提示词` 节点的 `system_prompt` **只写一句**，规则由桥自动补齐：
 
+> 下表是**示例声明**（作者本机的配法）。桥认的是你 `routes` 里写下的关键词——你的 routes 里若有别的关键词，就写那个。
+
 | 你想做的事 | `system_prompt` 就写 |
 |---|---|
 | **Krea2 长稿扩写**（最常用，tag 口径） | `krea2 扩写` |
@@ -133,7 +135,7 @@ ZML 的 `系统提示词` 节点是**静态**的：你把规则全文写进去�
 
 - Python 3.8+ —— 用 ComfyUI 自带的那个解释器就够，桥**只用标准库，零依赖**
 - 一个 OpenAI 兼容的 LLM 服务（本地网关 / 自建代理 / 各家云 API 都行）
-- 需要的 skill（`anima-tagger`、`anima-n-prompt`、`krea2-prompt`）—— **本仓库不含**，都是第三方或本地特有资产，需自行获取（见第七节）
+- 你自己的 skill —— **本仓库不含**，需自行安装（见第四节）
 
 ---
 
@@ -151,7 +153,7 @@ skill-bridge/
 │  ├─ dsh_skill_bridge.py         桥本体（纯标准库）
 │  ├─ bridge_config.json          配置：上游地址、密钥、场景路由、通用覆盖规则
 │  ├─ start-bridge.bat            双击启动（Windows）
-│  ├─ add_krea2_routes.py         注册 / 预演 krea2-prompt 的三条自然语言路由（`--check` 只预演）
+│  ├─ add_krea2_routes.py         注册 / 预演示例路由（`--check` 只预演，不写盘）
 │  ├─ fix_anima_routes.py         给 anima 系路由配「两段式 ＋ 512 硬约束」覆盖层（`--check` 只预演）
 │  └─ zml_model_key.json          ZML 节点的预设文件（填密钥用）
 ├─ plugins/
@@ -163,8 +165,8 @@ skill-bridge/
    └─ krea2_wiring.md             Krea2 Control 那套的接线参考
 ```
 
-> ⚠️ **本仓库不含 skill 本体。** 规则内容来自 `anima-tagger`、`anima-n-prompt`、`krea2-prompt` 三个 skill，
-> 都是第三方或本地特有资产，需要你自己获取后放进 `skills_dir`（见第七节）。
+> ⚠️ **本仓库不含 skill**，skill 需要自行安装并调用。仓库里的 `bridge_config.json` 也只是**格式示例**——
+> `routes` 要按你自己装好的 skill 来填，见「四、配置」里那段可以直接交给 agent 的短文。
 
 ---
 
@@ -172,8 +174,7 @@ skill-bridge/
 
 ### 第 1 步：放 skill
 
-**本仓库不含 skill 本体**，请先自行获取 `anima-tagger` 与 `anima-n-prompt`，
-放到你习惯的位置。默认约定是：
+**本仓库不含 skill**，把你自己的 skill 放到一个目录里即可。DSH 用户的默认约定是：
 
 ```
 C:\Users\<你的用户名>\.dsh\skills\
@@ -196,7 +197,30 @@ C:\Users\<你的用户名>\.dsh\skills\
 }
 ```
 
-其余字段都有注释说明，不动也能跑。
+其余字段都有注释说明。**注意 `routes` 是占位符示例**——它必须按你自己装的 skill 填，见下一步。
+
+### 第 2.5 步：`routes` 怎么填 —— 把这段交给你的 agent
+
+仓库里的 `bridge_config.json` 只是一份**格式示例**：`routes` 里的 skill 名与 references 文件名都是占位符，
+不指向任何具体 skill。把下面这段整段复制给你的 DSH / Claude / 任意 agent，它就会按你**实际装好的 skill** 生成 routes：
+
+````text
+我的 skill-bridge 装在 <路径>，请帮我配好 bridge/bridge_config.json 里的 routes。
+
+1. 列出我的 skills_dir 指向的目录下已安装的 skill，以及每个 skill 的 references/ 有哪些文件（读 SKILL.md 判断哪几份是必读）。
+2. 读 bridge_config.json 里的 `_路由格式说明`，按它给每个可用的 skill 生成一条 route：
+   - key：一组能识别该 skill 的关键词，用 `|` 分隔多个别名，最常用的放最前——桥按「命中最长的别名」选路由，所以更专用的别名要写得比通用词长。
+   - skill：skill 的目录名（与 skills_dir 下的文件夹名一致）。
+   - refs：该 skill 的 references/ 下必须喂给模型的文件名数组。
+   - refs_image_only：若该 skill 在「只给图、没给文字」时要换一套文档，填这里；否则省略。
+   - model：可省略，省略就走 upstream.model。
+3. 需要把「对话式输出」掰成「流水线输出」（只输出正文、不要代码块与解释、限制篇幅）时，在 route 里加 pipeline_overrides；不写则用全局那份。
+4. 把 default_route 指向最常用的那条 route。
+5. 不要动 upstream、skills_dir、port。改完校验 JSON 合法，并告诉我改了哪些字段。
+````
+
+配好之后的日常维护很简单：**改规则不用改 ComfyUI**——直接编辑 skill 目录里的 `.md`，桥按文件修改时间自动重载；
+改 `bridge_config.json`（含 routes）也是热重载，不用重启桥（只有 `port` 要重启）。
 
 ### 第 3 步：启动 + 接入 ComfyUI
 
@@ -279,18 +303,19 @@ LoadImage / DanbooruGallery
 
 ## 六、场景声明怎么写
 
-`ZML_LLM 系统提示词` 的 `system_prompt` **只写一句**，桥按关键词匹配（命中最长者优先）：
+`ZML_LLM 系统提示词` 的 `system_prompt` **只写一句**，桥按关键词匹配（命中最长者优先）。
+下表是**示例**（作者本机 routes 的配法）——桥只认你 `routes` 里写下的关键词：
 
-| 声明 | 加载的 skill | 适用 |
+| 声明（示例） | 该路由的写法 | 产出形态 |
 |---|---|---|
-| `krea2 扩写` | anima-tagger · 扩写分支 | krea2 长稿（tag 口径，靠 tag 锚点钳制输入） |
-| `krea2 巨构` / `krea2 巨物` / `krea2 巨怪` / `krea2 克苏鲁` | krea2-prompt · 巨物流 6 份 | 巨物 / 巨构 / 克苏鲁（摄影写实，纯英文长段落） |
-| `krea2 图文海报` / `krea2 海报` / `krea2 字体排版` | krea2-prompt · 参考流 8 份 | 按你给的文字 / 图片参考做海报式图文设计 |
-| `krea2 随机` / `krea2 随机流` / `krea2 人文建筑` | krea2-prompt · 随机流 9 份 | 无参考，模型自主创意 |
-| `anima 扩写` | anima-n-prompt · tag 流框架 | anima 场景（两段式：tag 流 ＋ 自然语言，≤ 512 token） |
-| `sdxl 扩写` | anima-n-prompt · tag 流框架 | sdxl 场景（同两段式） |
-| `minimax 扩写` | minimax-h3-video-prompt | 视频提示词（需自行准备该 skill） |
-| 留空 | 默认路由 | — |
+| `krea2 扩写` | 一个「tag 扩写」型 skill，refs 挂它的扩写分支与格式规范 | 长稿；tag 当锚点钳制输入 |
+| `krea2 巨构` / `krea2 巨物` / `krea2 巨怪` / `krea2 克苏鲁` | 一个「巨物摄影」型 skill，refs 挂它的相关章节 | 摄影写实长段落（体量 / 尺度 / 留白） |
+| `krea2 图文海报` / `krea2 海报` / `krea2 字体排版` | 一个「海报 / 排版」型 skill | 图文海报式输出（排版与文字为核心） |
+| `krea2 随机` / `krea2 随机流` / `krea2 人文建筑` | 一个「无参考自主创意」型 skill | 模型自主选题 |
+| `anima 扩写` | 一个「tag 流框架」型 skill ＋ 两段式覆盖层 | tag 流 ＋ 自然语言（受 512 token 硬约束） |
+| `sdxl 扩写` | 同上，区别只在覆盖层的长度口径 | 同两段式 |
+| `minimax 扩写` | 一个「视频提示词」型 skill | 视频提示词 |
+| 留空 | — | 走 `default_route` |
 
 > **krea2 两套并存**：只写 `krea2 扩写` 走 tag 长稿流程；带上主题词（`krea2 巨构` / `krea2 图文海报` / `krea2 随机`）走自然语言规则库——新别名都比裸词 `krea2` 长，桥按「命中最长者优先」自动分流，两套互不干扰。
 >
@@ -302,25 +327,9 @@ LoadImage / DanbooruGallery
 
 ---
 
-## 七、用到哪些 skill
+## 七、那个「Anima 提示词校验」节点
 
-| skill | 内容 | 本包里用它做什么 |
-|---|---|---|
-| **`anima-tagger`** | 反推 / 创作 / **扩写**三分支，含格式硬规则、槽位顺序、禁用清单 | **主线**：tag → 三段式长稿；带图时做反推 |
-| **`anima-n-prompt`** | 中文场景 → 提示词 的整套生成框架（ROLE / 输出协议 / 互斥表 / 槽位 / 场景决策树） | anima / sdxl 场景 |
-| **`krea2-prompt`** | Krea2 自然语言规则库：巨物流（巨怪 / 克苏鲁 / 巨构 / 有机巨物）、参考流（图文海报）、随机流，共 23 份规则 | krea2 自然语言场景（`krea2 巨构` 等） |
-
-三者都放在 `skills_dir` 指向的目录下，桥按场景声明和 `bridge_config.json` 的 `routes` 路由。
-
-> ⚠️ 这三个 skill **都不随仓库分发**：`anima-tagger` / `anima-n-prompt` 来自第三方项目与群友分享，`krea2-prompt` 是本地整理的特有资产（含群友分享的规则集）。仓库只发纯工具——桥本体、路由脚本、校验节点与文档。缺哪个 skill，对应路由只会报缺文件、拿不到规则。
-
-**改规则不用改 ComfyUI**：直接编辑 skill 目录里的 `.md` 文件即可，桥按文件修改时间自动重载（改 `bridge_config.json` 才需要重启桥）。
-
----
-
-## 八、那个「Anima 提示词校验」节点
-
-`plugins/comfyui-anima-validate-node` 是配套的确定性校验器，把 `anima-tagger` 自带的 `tools/anima_validate.py` 包成了节点：
+`plugins/comfyui-anima-validate-node` 是配套的确定性校验器，把某个 skill 自带的 `tools/anima_validate.py` 包成了节点：
 
 - 输入：LLM 产出的文本
 - 输出：修正后的文本 + 报告 + 退出码
@@ -328,10 +337,10 @@ LoadImage / DanbooruGallery
 - 它**不做**：质量词、画师名、中文的过滤——**那些要靠提示词规则拦住**，节点会在报告里单独提醒
 
 **安装**：把 `plugins/comfyui-anima-validate-node` 整个目录放进 `ComfyUI/custom_nodes/`，重启 ComfyUI。
-节点默认去 `~/.dsh/skills/anima-tagger` 找校验器；skill 放在别处的话，在节点的 `skill_dir` 里改。
+节点默认去 `~/.dsh/skills` 下某个 skill 里找校验器；skill 放在别处、或目录名不同，在节点的 `skill_dir` 里改。
 
 > 这个节点依赖 skill 目录里的 `tools/anima_validate.py` 与 `models/t5_tokenizer/`——
-> 它们随 `anima-tagger` skill 一起分发，本仓库不重复打包。
+> 它们随对应的 skill 一起分发，本仓库不重复打包。
 
 ### 顺带解决「审核拒绝被当成提示词」
 
@@ -359,7 +368,7 @@ LoadImage / DanbooruGallery
 
 ---
 
-## 九、回复缓存（抽卡省钱）
+## 八、回复缓存（抽卡省钱）
 
 CN 图生图抽卡时，常出现**同一张图 + 同一串 tag、只换随机种子反复跑**的情况。
 每次请求的 system prompt 都是同一份两万多字的规则——无条件重发等于每张都白烧一遍上下文，
@@ -396,7 +405,7 @@ CN 图生图抽卡时，常出现**同一张图 + 同一串 tag、只换随机�
 
 ---
 
-## 十、常见问题
+## 九、常见问题
 
 **Q：ComfyUI 报「返回空内容」**
 `最大Token数` 设小了，思考把预算吃光了。设 8192。桥的日志里会打出 `max_tokens=` 和 `思考=` 两个值，一眼能看出。
@@ -430,8 +439,8 @@ CN 图生图抽卡时，常出现**同一张图 + 同一串 tag、只换随机�
 
 ```
 skills_dir = C:\Users\你\.dsh\skills
-  route krea2      -> anima-tagger       OK
-  route anima      -> anima-n-prompt     缺失 SKILL.md
+  route <关键词>    -> <skill 目录名>     OK
+  route <关键词>    -> <skill 目录名>     缺失 SKILL.md
 ```
 
 目录不存在时直接提示「改成你放 skill 的目录；改完不必重启桥（配置是热重载的）」。
@@ -453,5 +462,5 @@ Get-NetTCPConnection -LocalPort 8899 -State Listen | ForEach-Object { Stop-Proce
 
 MIT，见 [LICENSE](LICENSE)。
 
-本仓库**不含** `anima-tagger` / `anima-n-prompt` 两个 skill 的正文，也**不含** wd14 模型权重——
+本仓库**不含**任何 skill 的正文，也**不含** wd14 模型权重——
 这些请从各自的来源获取，并遵循其原有许可。

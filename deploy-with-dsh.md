@@ -17,8 +17,8 @@ You are installing **skill-bridge** for the user — a small local service that 
 rules into ComfyUI's LLM nodes at request time. This file sits next to `bridge/`, `plugins/`
 and `README.md`.
 
-**Note: this repo ships no skill content** — all three skills (`anima-tagger`, `anima-n-prompt`, `krea2-prompt`) must be
-obtained separately.
+**Note: this repo ships no skill** — skills must be installed and called by the user, and `routes` must be
+filled in against the skills they actually have (see the agent-ready block in README section 4).
 
 **Goal**: get it deployed **and verified working**, then report back. Do not hand over a
 half-finished install.
@@ -110,6 +110,11 @@ Change exactly these fields. **Leave everything else alone** (`routes` and
 
 Fill `skills_dir` with the real path from step 0 — **no placeholders left behind**.
 
+Then rebuild `routes` from the skills the user actually has: `bridge_config.json` carries a
+`_路由格式说明` field explaining every key, and README section 4 ("Step 2.5") has a ready-made block
+for that. **Until `routes` is filled in the bridge idles** — no keyword matches, so every request
+falls back to `default_route`.
+
 Verify the JSON survived the edit:
 
 ```powershell
@@ -121,7 +126,7 @@ Verify the JSON survived the edit:
 ## Step 3 — place the skill and the plugin
 
 ```powershell
-# (1) Skills are not distributed with this repo: confirm the ones you need (anima-tagger, anima-n-prompt, krea2-prompt)
+# (1) Skills are not distributed with this repo: confirm the user's own skills are in DSH's skill dir
 #     are present in DSH's skill directory (the bridge reads from there by default too).
 Get-ChildItem "$env:USERPROFILE\.dsh\skills" -Directory | Select-Object -ExpandProperty Name
 
@@ -133,7 +138,7 @@ Confirm afterwards:
 
 ```powershell
 Get-ChildItem "$env:USERPROFILE\.dsh\skills" -Directory | Select-Object -ExpandProperty Name
-# expect to see anima-tagger and anima-n-prompt (krea2-prompt shows up too when present)
+# list the installed skills — these are what the routes table must point at
 ```
 
 **Tell the user**: the validation node only appears after a **ComfyUI restart** — you cannot
@@ -206,7 +211,7 @@ Keep it structured; don't paste walls of log:
 
 1. **What you found** — python path, LLM endpoint, model, skill directory, ComfyUI directory
 2. **What you changed** — the three fields in `bridge_config.json`
-3. **What you placed** — validation node into `custom_nodes`; confirmation that the skills
+3. **What you placed** — validation node into `custom_nodes`; confirmation that the user's own skills
    are present in `~/.dsh/skills`
 4. **Verification result** — the body length, and what the bridge log line looked like
 5. **What the user must do next**:

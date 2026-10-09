@@ -16,7 +16,7 @@
 你正在帮用户部署 **skill-bridge** —— 一个本地小服务，把 AI skill 的规则动态喂给 ComfyUI 的 LLM 节点。
 本文件与你同处一个目录，同目录下应有 `bridge/`、`plugins/`、`README.md`。
 
-**注意：本仓库不含 skill 本体**——`anima-tagger`、`anima-n-prompt`、`krea2-prompt` 都需要先自行获取（第三方或本地特有资产，仓库只发纯工具）。
+**注意：本仓库不含 skill**——skill 需要用户自行安装并调用；`bridge_config.json` 里的 `routes` 也要按用户**实际装好的** skill 来填（README「四、配置」里有一段可直接交给 agent 的短文）。
 
 **目标**：部署完成并**实测通过**，最后向用户报告结果。不要只做一半就交付。
 
@@ -103,6 +103,8 @@ Invoke-RestMethod -Uri "<baseURL>/models" -Headers $h | ConvertTo-Json -Depth 4
 
 `skills_dir` 用第 0 步探到的真实路径填，**不要留占位符**。
 
+接着按用户已装的 skill 重写 `routes`：`bridge_config.json` 里自带 `_路由格式说明`，README「四、配置 · 第 2.5 步」有一段可直接照做的短文。**没填 routes 之前桥是空转的**（每个关键词都不命中，走 `default_route`）。
+
 改完用 Python 校验 JSON 没写坏：
 
 ```powershell
@@ -114,7 +116,7 @@ Invoke-RestMethod -Uri "<baseURL>/models" -Headers $h | ConvertTo-Json -Depth 4
 ## 第 3 步 · 放置 skill 与插件
 
 ```powershell
-# ① skill 不随本仓库分发：确认需要的 skill 已在 DSH 的 skill 目录（anima-tagger / anima-n-prompt / krea2-prompt）
+# ① skill 不随本仓库分发：确认用户自己的 skill 已经在 DSH 的 skill 目录里
 #    （没有的话先去获取它们，桥默认也从这里读）
 Get-ChildItem "$env:USERPROFILE\.dsh\skills" -Directory | Select-Object -ExpandProperty Name
 
@@ -126,7 +128,7 @@ Copy-Item "<包路径>\plugins\comfyui-anima-validate-node" "<ComfyUI目录>\cus
 
 ```powershell
 Get-ChildItem "$env:USERPROFILE\.dsh\skills" -Directory | Select-Object -ExpandProperty Name
-# 应该能看到 anima-tagger 和 anima-n-prompt（有 krea2-prompt 也会列出；缺它只影响 krea2 自然语言那三条路由）
+# 列出用户已装的 skill——它们就是接下来要填进 routes 的对象
 ```
 
 **提醒用户**：校验节点需要**重启 ComfyUI** 才会出现，这一步你代替不了。
@@ -190,7 +192,7 @@ Get-Content "<包路径>\bridge\bridge.log" -Tail 8 -Encoding UTF8
 
 1. **探到什么**：python 路径、LLM 服务地址、模型、skill 目录、ComfyUI 目录
 2. **改了什么**：`bridge_config.json` 的三个字段
-3. **放了什么**：校验节点进 `custom_nodes`；并确认三个 skill 中实际存在的那些已在 `~/.dsh/skills`
+3. **放了什么**：校验节点进 `custom_nodes`；并确认用户自己的 skill 已在 `~/.dsh/skills`，以及 `routes` 已按这些 skill 重写（写明用了哪几个关键词）
 4. **实测结果**：正文长度多少、桥日志那一行长什么样
 5. **用户接下来要做**：
    - 重启 ComfyUI（校验节点才会出现）

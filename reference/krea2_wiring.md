@@ -131,7 +131,7 @@ JoinStringMulti.string_6 ──┬──→ ShowText（预览用，不影响主�
 | | 输出「回复内容」 | → 过滤思考 | |
 | **ZML_LLM 过滤思考** | 无参数 | | 直通 |
 | **黑名单过滤**（可选） | 黑名单 | 加 ` ```text ` / ` ``` ` | 兜底，正常不该出现 |
-| **Anima 提示词校验** | `skill_dir` | `C:\Users\<你的用户名>\.dsh\skills\anima-tagger` | 默认已填 |
+| **Anima 提示词校验** | `skill_dir` | `C:\Users\<你的用户名>\.dsh\skills\<你的 skill>` | 默认已填 |
 | | `mode` | `扩写（不查长度）` | 扩写分支豁免 512 |
 | | `on_problem` | `用修正稿` | 或改 `中断执行` 让它卡住 |
 

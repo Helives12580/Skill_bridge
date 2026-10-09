@@ -24,8 +24,9 @@ rules off disk and injects them.
 | **comfyui-anima-validate-node** | Optional | `Anima 提示词校验` node: deterministic tag validation (normalization / hypernym folding / slot conflicts / length) plus refusal detection | This repo, `plugins/` |
 | **[ComfyUI-NL-PromptForge](https://github.com/Helives12580/ComfyUI-NL-PromptForge)** | Optional | `NL Prompt Forge 黑名单过滤` node: catches stray code fences. The validate node's **refusal-detection heuristic** (dual-keyword table + punctuation folding) is modelled on this plugin | <https://github.com/Helives12580/ComfyUI-NL-PromptForge> |
 
-> **This repo ships no skill content.** The rules come from the `anima-tagger` and
-> `anima-n-prompt` skills, which you provide yourself — see "Which skills are used".
+> **This repo ships no skill.** Skills must be installed and called by you; the rules live outside
+> this repo. Once installed, point the `routes` table in `bridge_config.json` at your own skills
+> (section 4).
 
 ### The pipeline
 
@@ -101,6 +102,10 @@ It also handles a few things on the side:
 
 The `system_prompt` field takes **one short line**; the bridge fills in the rest:
 
+> The table below shows **example declarations** (how the author's own setup is wired). What the
+> bridge actually matches is the keywords you wrote in `routes` — if your routes use other
+> keywords, write those instead.
+
 | What you want | `system_prompt` |
 |---|---|
 | **Krea2 long-form expansion** (most common, tag style) | `krea2 扩写` |
@@ -151,8 +156,7 @@ For the full plugin/node list, see "Plugins used" at the top.
 - Python 3.8+ — the interpreter bundled with ComfyUI is fine. The bridge uses
   **only the standard library, zero dependencies**
 - An OpenAI-compatible LLM endpoint (local gateway, self-hosted proxy, or any cloud API)
-- The skills (`anima-tagger`, `anima-n-prompt`, `krea2-prompt`) — **not included in this repo**;
-  they are third-party or local-only assets, fetch them yourself (section 7)
+- Your own skills — **not included in this repo**; install them yourself (section 4)
 
 ---
 
@@ -170,7 +174,7 @@ skill-bridge/
 │  ├─ dsh_skill_bridge.py         the bridge itself (standard library only)
 │  ├─ bridge_config.json          upstream URL, key, scene routes, shared override layer
 │  ├─ start-bridge.bat            double-click to start (Windows)
-│  ├─ add_krea2_routes.py         register / dry-run the three krea2-prompt routes (`--check`)
+│  ├─ add_krea2_routes.py         register / dry-run example routes (`--check`, writes nothing)
 │  ├─ fix_anima_routes.py         attach the "two-part + 512-token cap" override to anima routes
 │  └─ zml_model_key.json          ZML preset file (holds the API key)
 ├─ plugins/
@@ -182,8 +186,9 @@ skill-bridge/
    └─ krea2_wiring.md             Krea2 Control wiring reference (Chinese)
 ```
 
-> ⚠️ **No skill content is bundled.** The rules come from `anima-tagger` and
-> `anima-n-prompt`; fetch them yourself and point `skills_dir` at them (section 7).
+> ⚠️ **No skill is bundled.** Skills must be installed and called by you. The
+> `bridge_config.json` in this repo is a **format example** too — `routes` has to be filled in
+> against the skills you installed; see the agent-ready block in section 4.
 
 ---
 
@@ -191,8 +196,8 @@ skill-bridge/
 
 ### Step 1 — put the skills in place
 
-**This repo does not ship the skills.** Obtain `anima-tagger` and `anima-n-prompt` and put
-them wherever you like. The conventional location is:
+**This repo does not ship any skill.** Put your own skills in one directory; the conventional
+location for DSH users is:
 
 ```
 C:\Users\<you>\.dsh\skills\
@@ -215,7 +220,33 @@ Three fields matter:
 }
 ```
 
-Everything else is documented inline and works untouched.
+Everything else is documented inline. **Note that `routes` is a placeholder example** — it has to
+be filled in against your own skills; see the next step.
+
+### Step 2.5 — how to fill `routes` (hand this block to your agent)
+
+The `bridge_config.json` shipped here is a **format example**: the skill names and reference file
+names inside `routes` are placeholders pointing at nothing. Paste the block below to your DSH /
+Claude / any agent and it will build `routes` from the skills **you** actually have installed:
+
+````text
+skill-bridge lives at <path>. Please fill in the routes table in bridge/bridge_config.json.
+
+1. List the skills installed under my skills_dir, and for each one the files in its references/ (read SKILL.md to decide which of them are required).
+2. Read the `_路由格式说明` field in bridge_config.json and follow it to add one route per usable skill:
+   - key: a set of keywords identifying that skill, several aliases separated by `|`, most common first. The bridge picks the route whose matched alias is longest, so keep dedicated aliases longer than generic words.
+   - skill: that skill's folder name under skills_dir.
+   - refs: array of file names under that skill's references/ that must be fed to the model.
+   - refs_image_only: if the skill switches to a different set of docs for "an image but no text anchor", put it here; otherwise omit.
+   - model: optional — omitted means upstream.model.
+3. To turn chat-style output into pipeline output (body only, no code fences, no explanation, length budget), add pipeline_overrides to that route; without it the global one applies.
+4. Point default_route at the route you use most.
+5. Do not touch upstream, skills_dir or port. Validate the JSON when done and tell me which fields changed.
+````
+
+Afterwards maintenance is trivial: **rule changes need no ComfyUI edits** — edit the `.md` files in
+the skill folder and the bridge reloads them by modification time. Changing `bridge_config.json`
+(including `routes`) is hot-reloaded as well; only `port` needs a restart.
 
 ### Step 3 — start it, then wire up ComfyUI
 
@@ -313,18 +344,20 @@ touching Python.
 
 ## 6. Scene declarations
 
-The `system_prompt` field takes **one line**. The bridge matches keywords, longest match wins:
+The `system_prompt` field takes **one line**. The bridge matches keywords, longest match wins.
+The table is an **example** of the author's own wiring — the bridge only knows the keywords you put
+in your own `routes`:
 
-| Declaration | Skill loaded | Suits |
+| Declaration (example) | How that route is wired | Output shape |
 |---|---|---|
-| `krea2 扩写` | anima-tagger · expansion branch | krea2 tag-style long form |
-| `krea2 megastructure` / `krea2 colossal` / `krea2 kaiju` / `krea2 cthulhu` | krea2-prompt · colossal set (6 files) | colossal subjects (photoreal, one English paragraph) |
-| `krea2 poster` / `krea2 typography` | krea2-prompt · poster set (8 files) | poster-style graphic design from your text / image reference |
-| `krea2 random` / `krea2 random poster` | krea2-prompt · random set (9 files) | no reference — the model invents the subject |
-| `anima 扩写` | anima-n-prompt · tag-stream framework | anima scenes (two parts: tag stream ＋ natural language, hard 512-token cap) |
-| `sdxl 扩写` | anima-n-prompt · tag-stream framework | sdxl scenes (same two-part shape) |
-| `minimax 扩写` | minimax-h3-video-prompt | video prompts (bring that skill yourself) |
-| empty | default route | — |
+| `krea2 扩写` | a "tag expansion" skill; refs point at its expansion branch + format rules | long form; tags act as anchors that clamp the input |
+| `krea2 megastructure` / `krea2 colossal` / `krea2 kaiju` / `krea2 cthulhu` | a "colossal photography" skill; refs point at its relevant chapters | photoreal long paragraph (scale / mass / negative space) |
+| `krea2 poster` / `krea2 typography` | a "poster / typography" skill | poster-style graphic output (layout + text first) |
+| `krea2 random` / `krea2 random poster` | a "no-reference, free invention" skill | the model picks the subject |
+| `anima 扩写` | a "tag-stream framework" skill ＋ a two-part override | tag stream ＋ natural language (hard 512-token cap) |
+| `sdxl 扩写` | same as above, only the length budget differs | same two-part shape |
+| `minimax 扩写` | a "video prompt" skill | video prompts |
+| empty | — | falls back to `default_route` |
 
 Chinese aliases work just as well: `krea2 巨构`, `krea2 图文海报`, `krea2 随机` route identically.
 Matching is keyword-based with longest-alias-wins, so the three natural-language routes never
@@ -345,33 +378,10 @@ one entry there — not touching the workflow.
 
 ---
 
-## 7. Which skills are used
+## 7. The "Anima 提示词校验" node
 
-| Skill | Contents | Role here |
-|---|---|---|
-| **`anima-tagger`** | three branches (reverse-tagging / creation / **expansion**), with hard format rules, slot order, banned-term list | **main path**: tag → three-part long form; also does reverse-tagging when an image is attached |
-| **`anima-n-prompt`** | full generation framework for Chinese scene descriptions → prompt (role / output protocol / mutual-exclusion table / slots / scene decision tree) | anima and sdxl scenes |
-| **`krea2-prompt`** | krea2 natural-language rule library: colossal set (kaiju / Cthulhu / megastructure / organic colossus), poster set (graphic posters), random set — 23 rule files | krea2 natural-language scenes (`krea2 megastructure` etc.) |
-
-All three live under `skills_dir`; the bridge routes by scene declaration and the `routes` table in
-`bridge_config.json`.
-
-> ⚠️ None of the three skills ship with this repo: `anima-tagger` / `anima-n-prompt` come from
-> third-party projects and community shares, `krea2-prompt` is a local-only asset (built from a
-> rule set shared in our community). This repo ships **tools only** — the bridge, the route
-> scripts, the validation node and the docs. A missing skill simply makes its route report
-> missing files and hand nothing to the model.
-
-**Rule changes need no ComfyUI edits**: edit the `.md` files in the skill folder and the
-bridge picks them up by modification time (only `bridge_config.json` needs a restart… which
-it doesn't either, see the FAQ).
-
----
-
-## 8. The "Anima 提示词校验" node
-
-`plugins/comfyui-anima-validate-node` wraps `anima-tagger`'s bundled `tools/anima_validate.py`
-into a node:
+`plugins/comfyui-anima-validate-node` wraps the `tools/anima_validate.py` that ships with a skill
+(whichever one you installed) into a node:
 
 - **Input**: text produced by the LLM
 - **Output**: corrected text + a report + an exit code
@@ -382,10 +392,10 @@ into a node:
 
 **Install**: drop the whole `plugins/comfyui-anima-validate-node` folder into
 `ComfyUI/custom_nodes/` and restart ComfyUI. The node looks for the validator under
-`~/.dsh/skills/anima-tagger`; if your skills live elsewhere, change the node's `skill_dir`.
+`~/.dsh/skills`; if your skills live elsewhere or under other names, change the node's `skill_dir`.
 
 > The node needs `tools/anima_validate.py` and `models/t5_tokenizer/` from the skill folder —
-> those ship with `anima-tagger`, and this repo does not repackage them.
+> those ship with the corresponding skill, and this repo does not repackage them.
 
 ### Bonus: refusals are no longer mistaken for prompts
 
@@ -416,7 +426,7 @@ curly apostrophe — without folding, every `can't` pattern would miss.
 
 ---
 
-## 9. Reply cache (saves money while seed-hunting)
+## 8. Reply cache (saves money while seed-hunting)
 
 CN img2img seed-hunting often means **the same image + the same tag, only the seed changing**.
 Every request carries the same 21k-char system prompt, so resending it each time wastes the
@@ -458,7 +468,7 @@ of ideas, drawing several phrasings from one tag set — the cache gets in the w
 
 ---
 
-## 10. FAQ
+## 9. FAQ
 
 **ComfyUI reports "empty response"**
 `最大Token数` is too small — the reasoning burned the whole budget. Set 8192. The bridge log
@@ -498,8 +508,8 @@ The bridge prints every route's status **at startup**, so you don't have to wait
 
 ```
 skills_dir = C:\Users\you\.dsh\skills
-  route krea2      -> anima-tagger       OK
-  route anima      -> anima-n-prompt     missing SKILL.md
+  route <keyword>  -> <skill dir>        OK
+  route <keyword>  -> <skill dir>        missing SKILL.md
 ```
 
 If the directory doesn't exist it says so and tells you to repoint it (no restart needed).
@@ -523,5 +533,5 @@ Get-NetTCPConnection -LocalPort 8899 -State Listen | ForEach-Object { Stop-Proce
 
 MIT — see [LICENSE](LICENSE).
 
-This repo contains **no** skill content (`anima-tagger` / `anima-n-prompt`) and **no** wd14
+This repo contains **no** skill content and **no** wd14
 model weights. Obtain those from their own sources and respect their original licenses.
