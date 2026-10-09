@@ -121,7 +121,11 @@ Invoke-RestMethod -Uri "<baseURL>/models" -Headers $h | ConvertTo-Json -Depth 4
 Get-ChildItem "$env:USERPROFILE\.dsh\skills" -Directory | Select-Object -ExpandProperty Name
 
 # ② 校验节点 → ComfyUI 的 custom_nodes（路径用第 0 步探到的）
-Copy-Item "<包路径>\plugins\comfyui-anima-validate-node" "<ComfyUI目录>\custom_nodes\" -Recurse -Force
+#    这个包改过名（旧名 comfyui-anima-validate-node → 现名 skill-bridge-toolkit）：
+#    如果用户装过旧版，必须先删旧目录再放新目录，否则两个包同时加载、节点重复注册。
+#    全新安装时下面那条 Remove-Item 会因为路径不存在而静默跳过（已加 -ErrorAction SilentlyContinue）。
+Remove-Item "<ComfyUI目录>\custom_nodes\comfyui-anima-validate-node" -Recurse -Force -ErrorAction SilentlyContinue
+Copy-Item "<包路径>\plugins\skill-bridge-toolkit" "<ComfyUI目录>\custom_nodes\" -Recurse -Force
 ```
 
 放完确认一下：

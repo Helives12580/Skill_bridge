@@ -19,7 +19,7 @@
 | 插件 | 必需性 | 提供什么 | 项目地址 |
 |---|---|---|---|
 | **ComfyUI-ZML-Image** | **必需** | LLM 节点全套：`模型加载器V2`（读 API 配置）、`系统提示词`（**填场景声明的那一句**）、`参数设置`（温度 / 最大 Token 数）、`对话主程序`（发请求拿回复）、`过滤思考`（去掉推理模型的思考块）。这套节点用官方 `openai` SDK，所以**任何 OpenAI 兼容服务都能接** | <https://github.com/zml-w/ComfyUI-ZML-Image> |
-| **comfyui-anima-validate-node** | 可选 | `Anima 提示词校验` 节点：确定性校验 tag（规范化 / 上位词折叠 / 槽位冲突 / 长度）＋ 审核拒绝检测 | 本仓库 `plugins/` 目录 |
+| **skill-bridge-toolkit** | 可选 | `Anima 提示词校验` 节点：确定性校验 tag（规范化 / 上位词折叠 / 槽位冲突 / 长度）＋ 审核拒绝检测 | 本仓库 `plugins/` 目录 |
 | **[ComfyUI-NL-PromptForge](https://github.com/Helives12580/ComfyUI-NL-PromptForge)** | 可选 | `NL Prompt Forge 黑名单过滤` 节点：兜底清掉意外漏出的代码块标记。本仓库校验节点的**审核拒绝检测判据**（双重命中词表 + 标点折叠）参考了该插件的实现 | <https://github.com/Helives12580/ComfyUI-NL-PromptForge> |
 
 > **本仓库不含 skill**，skill 需要自行安装并调用；规则内容不在仓库里。装好之后按第四节把
@@ -157,7 +157,7 @@ skill-bridge/
 │  ├─ fix_anima_routes.py         给 anima 系路由配「两段式 ＋ 512 硬约束」覆盖层（`--check` 只预演）
 │  └─ zml_model_key.json          ZML 节点的预设文件（填密钥用）
 ├─ plugins/
-│  └─ comfyui-anima-validate-node/  「Anima 提示词校验」节点
+│  └─ skill-bridge-toolkit/        「Anima 提示词校验」＋数值转文本＋H3 帧锚点栈
 ├─ updates/                       增量补丁（已装过旧版的人不用重下整包）
 │  └─ 2026-10-10-anima-krea2.md   anima 两段式 ＋ krea2 自然语言路由
 └─ reference/                     不想用桥的话看这里
@@ -329,15 +329,29 @@ LoadImage / DanbooruGallery
 
 ## 七、那个「Anima 提示词校验」节点
 
-`plugins/comfyui-anima-validate-node` 是配套的确定性校验器，把某个 skill 自带的 `tools/anima_validate.py` 包成了节点：
+`plugins/skill-bridge-toolkit` 是配套的小工具集，其中 `anima_validate_node.py` 把某个 skill 自带的 `tools/anima_validate.py` 包成了节点：
 
 - 输入：LLM 产出的文本
 - 输出：修正后的文本 + 报告 + 退出码
 - 它做：tag 规范化（下划线转空格、小写）、上位词折叠、槽位冲突检查
 - 它**不做**：质量词、画师名、中文的过滤——**那些要靠提示词规则拦住**，节点会在报告里单独提醒
 
-**安装**：把 `plugins/comfyui-anima-validate-node` 整个目录放进 `ComfyUI/custom_nodes/`，重启 ComfyUI。
+**安装 / 升级**：把 `plugins/skill-bridge-toolkit` 整个目录放进 `ComfyUI/custom_nodes/`，重启 ComfyUI。
 节点默认去 `~/.dsh/skills` 下某个 skill 里找校验器；skill 放在别处、或目录名不同，在节点的 `skill_dir` 里改。
+
+> ⚠️ **这个包改过名字：升级必须先删旧包，再放新包。**
+> 旧目录名 `comfyui-anima-validate-node` → 现目录名 `skill-bridge-toolkit`；内容也从单个校验节点扩成三个：
+> 校验节点 ＋ 数值转文本（`number_to_text.py`）＋ H3 帧锚点栈（`h3_guide_stack.py`）。
+> ComfyUI 是**按目录名认包**的——直接覆盖、或者只把新目录放进去而不删旧的，会让两个包同时加载、节点重复注册，
+> 工作流里那些节点可能指向被覆盖的那一份，表现为参数丢失、取值错乱甚至加载报错。
+>
+> ```powershell
+> # 1) 先删旧包（务必先删；全新安装跳过这一步）
+> Remove-Item "<ComfyUI>\custom_nodes\comfyui-anima-validate-node" -Recurse -Force
+> # 2) 再放新包
+> Copy-Item "<仓库>\plugins\skill-bridge-toolkit" "<ComfyUI>\custom_nodes\" -Recurse -Force
+> # 3) 重启 ComfyUI
+> ```
 
 > 这个节点依赖 skill 目录里的 `tools/anima_validate.py` 与 `models/t5_tokenizer/`——
 > 它们随对应的 skill 一起分发，本仓库不重复打包。

@@ -21,7 +21,7 @@ rules off disk and injects them.
 | Plugin | Required? | What it provides | Project |
 |---|---|---|---|
 | **ComfyUI-ZML-Image** | **Required** | The whole LLM node set: `模型加载器V2` (Model Loader, reads API config), `系统提示词` (System Prompt — **where the scene declaration goes**), `参数设置` (Parameters — temperature, max tokens), `对话主程序` (Chat — sends the request), `过滤思考` (Thought Filter — strips the reasoning block). Built on the official `openai` SDK, so **any OpenAI-compatible endpoint works** | <https://github.com/zml-w/ComfyUI-ZML-Image> |
-| **comfyui-anima-validate-node** | Optional | `Anima 提示词校验` node: deterministic tag validation (normalization / hypernym folding / slot conflicts / length) plus refusal detection | This repo, `plugins/` |
+| **skill-bridge-toolkit** | Optional | `Anima 提示词校验` node: deterministic tag validation (normalization / hypernym folding / slot conflicts / length) plus refusal detection | This repo, `plugins/` |
 | **[ComfyUI-NL-PromptForge](https://github.com/Helives12580/ComfyUI-NL-PromptForge)** | Optional | `NL Prompt Forge 黑名单过滤` node: catches stray code fences. The validate node's **refusal-detection heuristic** (dual-keyword table + punctuation folding) is modelled on this plugin | <https://github.com/Helives12580/ComfyUI-NL-PromptForge> |
 
 > **This repo ships no skill.** Skills must be installed and called by you; the rules live outside
@@ -178,7 +178,7 @@ skill-bridge/
 │  ├─ fix_anima_routes.py         attach the "two-part + 512-token cap" override to anima routes
 │  └─ zml_model_key.json          ZML preset file (holds the API key)
 ├─ plugins/
-│  └─ comfyui-anima-validate-node/  the "Anima 提示词校验" node
+│  └─ skill-bridge-toolkit/        the "Anima 提示词校验" node + number→text + H3 frame-anchor stack
 ├─ updates/                       incremental patches (skip the full re-download)
 │  └─ 2026-10-10-anima-krea2.md   anima two-part output + krea2 natural-language routes
 └─ reference/                     for people who prefer not to use the bridge
@@ -380,7 +380,7 @@ one entry there — not touching the workflow.
 
 ## 7. The "Anima 提示词校验" node
 
-`plugins/comfyui-anima-validate-node` wraps the `tools/anima_validate.py` that ships with a skill
+`plugins/skill-bridge-toolkit` wraps the `tools/anima_validate.py` that ships with a skill
 (whichever one you installed) into a node:
 
 - **Input**: text produced by the LLM
@@ -390,9 +390,25 @@ one entry there — not touching the workflow.
 - **It does not**: filter quality words, artist names, or non-English text — **those have to be
   blocked by the prompt rules themselves**; the node only flags them in the report
 
-**Install**: drop the whole `plugins/comfyui-anima-validate-node` folder into
+**Install / upgrade**: drop the whole `plugins/skill-bridge-toolkit` folder into
 `ComfyUI/custom_nodes/` and restart ComfyUI. The node looks for the validator under
 `~/.dsh/skills`; if your skills live elsewhere or under other names, change the node's `skill_dir`.
+
+> ⚠️ **This package was renamed: on upgrade you must delete the old folder first.**
+> Old folder name `comfyui-anima-validate-node` → new name `skill-bridge-toolkit`, and it grew from a
+> single validation node into three: the validation node, number→text (`number_to_text.py`) and an
+> H3 frame-anchor stack (`h3_guide_stack.py`). ComfyUI keys packages **by folder name**, so
+> overwriting in place — or adding the new folder without deleting the old one — loads both packages,
+> registers the nodes twice, and can leave workflow nodes pointing at the overwritten copy
+> (lost widgets, wrong values, or load errors).
+>
+> ```powershell
+> # 1) delete the old package first (skip if this is a fresh install)
+> Remove-Item "<ComfyUI>\custom_nodes\comfyui-anima-validate-node" -Recurse -Force
+> # 2) add the new one
+> Copy-Item "<repo>\plugins\skill-bridge-toolkit" "<ComfyUI>\custom_nodes\" -Recurse -Force
+> # 3) restart ComfyUI
+> ```
 
 > The node needs `tools/anima_validate.py` and `models/t5_tokenizer/` from the skill folder —
 > those ship with the corresponding skill, and this repo does not repackage them.

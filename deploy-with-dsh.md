@@ -131,7 +131,11 @@ Verify the JSON survived the edit:
 Get-ChildItem "$env:USERPROFILE\.dsh\skills" -Directory | Select-Object -ExpandProperty Name
 
 # (2) Validation node -> ComfyUI's custom_nodes (use the path found in step 0)
-Copy-Item "<package>\plugins\comfyui-anima-validate-node" "<ComfyUI dir>\custom_nodes\" -Recurse -Force
+#     This package was renamed (comfyui-anima-validate-node -> skill-bridge-toolkit).
+#     If an older copy is installed, delete it first or both packages load and register
+#     the same nodes twice. On a fresh install the Remove-Item silently skips (see below).
+Remove-Item "<ComfyUI dir>\custom_nodes\comfyui-anima-validate-node" -Recurse -Force -ErrorAction SilentlyContinue
+Copy-Item "<package>\plugins\skill-bridge-toolkit" "<ComfyUI dir>\custom_nodes\" -Recurse -Force
 ```
 
 Confirm afterwards:
