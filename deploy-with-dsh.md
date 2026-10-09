@@ -17,7 +17,7 @@ You are installing **skill-bridge** for the user — a small local service that 
 rules into ComfyUI's LLM nodes at request time. This file sits next to `bridge/`, `plugins/`
 and `README.md`.
 
-**Note: this repo ships no skill content** — `anima-tagger` and `anima-n-prompt` must be
+**Note: this repo ships no skill content** — all three skills (`anima-tagger`, `anima-n-prompt`, `krea2-prompt`) must be
 obtained separately.
 
 **Goal**: get it deployed **and verified working**, then report back. Do not hand over a
@@ -121,7 +121,7 @@ Verify the JSON survived the edit:
 ## Step 3 — place the skill and the plugin
 
 ```powershell
-# (1) Skills are not distributed with this repo: confirm anima-tagger and anima-n-prompt
+# (1) Skills are not distributed with this repo: confirm the ones you need (anima-tagger, anima-n-prompt, krea2-prompt)
 #     are present in DSH's skill directory (the bridge reads from there by default too).
 Get-ChildItem "$env:USERPROFILE\.dsh\skills" -Directory | Select-Object -ExpandProperty Name
 
@@ -133,7 +133,7 @@ Confirm afterwards:
 
 ```powershell
 Get-ChildItem "$env:USERPROFILE\.dsh\skills" -Directory | Select-Object -ExpandProperty Name
-# expect to see anima-tagger and anima-n-prompt
+# expect to see anima-tagger and anima-n-prompt (krea2-prompt shows up too when present)
 ```
 
 **Tell the user**: the validation node only appears after a **ComfyUI restart** — you cannot
@@ -182,6 +182,11 @@ print('first 200 chars:', c[:200])
   the budget was eaten by reasoning; raise `max_tokens` to 8192 and retry
 - 502 mentioning `api_key 不可用` → the key in step 2 is wrong
 - can't connect → read the last lines of `bridge\bridge.log`
+- **shape check (send a second request with `anima 扩写`)**: the body should be exactly two parts —
+  a tag stream, a blank line, then a few short English sentences (a few hundred characters total).
+  A three-part long form, seven-layer headings or `[SUBJECT]` blocks mean that route's
+  `pipeline_overrides` did not take effect — compare the anima entries in `bridge_config.json`
+  (older configs lack that field; update through the patch in `updates/`)
 
 **(3) Confirm the route matched**, in the log:
 
@@ -201,7 +206,7 @@ Keep it structured; don't paste walls of log:
 
 1. **What you found** — python path, LLM endpoint, model, skill directory, ComfyUI directory
 2. **What you changed** — the three fields in `bridge_config.json`
-3. **What you placed** — validation node into `custom_nodes`; confirmation that both skills
+3. **What you placed** — validation node into `custom_nodes`; confirmation that the skills
    are present in `~/.dsh/skills`
 4. **Verification result** — the body length, and what the bridge log line looked like
 5. **What the user must do next**:

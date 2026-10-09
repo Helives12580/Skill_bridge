@@ -94,11 +94,13 @@ ZML 的 `系统提示词` 节点是**静态**的：你把规则全文写进去�
 
 | 你想做的事 | `system_prompt` 就写 |
 |---|---|
-| **Krea2 长稿扩写**（最常用） | `krea2 扩写` |
+| **Krea2 长稿扩写**（最常用，tag 口径） | `krea2 扩写` |
 | Krea2 且要传图 | `krea2 扩写`，并把图片接到 `input_image` |
+| **Krea2 自然语言**（巨物 / 海报 / 随机） | `krea2 巨构`、`krea2 图文海报`、`krea2 随机` |
+| Krea2 自然语言 ＋ 传图 | 同上，并把图片接到 `input_image`（图只当尺度 / 风格参考，不走打标反推） |
 | Minimax | `minimax 扩写` |
-| Anima 场景 | `anima 扩写` |
-| SDXL 场景 | `sdxl 扩写` |
+| Anima 场景 | `anima 扩写`（输出＝tag 流 ＋ 自然语言两段，受 512 token 硬约束） |
+| SDXL 场景 | `sdxl 扩写`（同两段式） |
 | 留空 | 走默认路由 |
 
 > **只写这一句，不要把规则全文粘进去。** 粘全文是「直连模式」才需要的做法——那是另一个方案，
@@ -131,7 +133,7 @@ ZML 的 `系统提示词` 节点是**静态**的：你把规则全文写进去�
 
 - Python 3.8+ —— 用 ComfyUI 自带的那个解释器就够，桥**只用标准库，零依赖**
 - 一个 OpenAI 兼容的 LLM 服务（本地网关 / 自建代理 / 各家云 API 都行）
-- `anima-tagger` 与 `anima-n-prompt` 两个 skill —— **本仓库不含**，需要自行获取（见第七节）
+- 需要的 skill（`anima-tagger`、`anima-n-prompt`、`krea2-prompt`）—— **本仓库不含**，都是第三方或本地特有资产，需自行获取（见第七节）
 
 ---
 
@@ -148,17 +150,21 @@ skill-bridge/
 ├─ bridge/
 │  ├─ dsh_skill_bridge.py         桥本体（纯标准库）
 │  ├─ bridge_config.json          配置：上游地址、密钥、场景路由、通用覆盖规则
-│  ├─ start-bridge.bat                  双击启动（Windows）
+│  ├─ start-bridge.bat            双击启动（Windows）
+│  ├─ add_krea2_routes.py         注册 / 预演 krea2-prompt 的三条自然语言路由（`--check` 只预演）
+│  ├─ fix_anima_routes.py         给 anima 系路由配「两段式 ＋ 512 硬约束」覆盖层（`--check` 只预演）
 │  └─ zml_model_key.json          ZML 节点的预设文件（填密钥用）
 ├─ plugins/
 │  └─ comfyui-anima-validate-node/  「Anima 提示词校验」节点
-└─ reference/                           不想用桥的话看这里
+├─ updates/                       增量补丁（已装过旧版的人不用重下整包）
+│  └─ 2026-10-10-anima-krea2.md   anima 两段式 ＋ krea2 自然语言路由
+└─ reference/                     不想用桥的话看这里
    ├─ krea2_pipeline_system_prompt.txt  直连模式的静态规则全文
-   └─ krea2_wiring.md                Krea2 Control 那套的接线参考
+   └─ krea2_wiring.md             Krea2 Control 那套的接线参考
 ```
 
-> ⚠️ **本仓库不含 skill 本体。** 规则内容来自 `anima-tagger` 与 `anima-n-prompt` 两个 skill，
-> 需要你自己获取后放进 `skills_dir`（见第七节）。
+> ⚠️ **本仓库不含 skill 本体。** 规则内容来自 `anima-tagger`、`anima-n-prompt`、`krea2-prompt` 三个 skill，
+> 都是第三方或本地特有资产，需要你自己获取后放进 `skills_dir`（见第七节）。
 
 ---
 
@@ -277,11 +283,20 @@ LoadImage / DanbooruGallery
 
 | 声明 | 加载的 skill | 适用 |
 |---|---|---|
-| `krea2 扩写` | anima-tagger · 扩写分支 | krea2 长稿 |
-| `anima 扩写` | anima-n-prompt · 框架规则 | anima 场景 |
-| `sdxl 扩写` | anima-n-prompt · 框架规则 | sdxl 场景 |
-| `minimax 扩写` | anima-tagger · 扩写分支 | minimax |
+| `krea2 扩写` | anima-tagger · 扩写分支 | krea2 长稿（tag 口径，靠 tag 锚点钳制输入） |
+| `krea2 巨构` / `krea2 巨物` / `krea2 巨怪` / `krea2 克苏鲁` | krea2-prompt · 巨物流 6 份 | 巨物 / 巨构 / 克苏鲁（摄影写实，纯英文长段落） |
+| `krea2 图文海报` / `krea2 海报` / `krea2 字体排版` | krea2-prompt · 参考流 8 份 | 按你给的文字 / 图片参考做海报式图文设计 |
+| `krea2 随机` / `krea2 随机流` / `krea2 人文建筑` | krea2-prompt · 随机流 9 份 | 无参考，模型自主创意 |
+| `anima 扩写` | anima-n-prompt · tag 流框架 | anima 场景（两段式：tag 流 ＋ 自然语言，≤ 512 token） |
+| `sdxl 扩写` | anima-n-prompt · tag 流框架 | sdxl 场景（同两段式） |
+| `minimax 扩写` | minimax-h3-video-prompt | 视频提示词（需自行准备该 skill） |
 | 留空 | 默认路由 | — |
+
+> **krea2 两套并存**：只写 `krea2 扩写` 走 tag 长稿流程；带上主题词（`krea2 巨构` / `krea2 图文海报` / `krea2 随机`）走自然语言规则库——新别名都比裸词 `krea2` 长，桥按「命中最长者优先」自动分流，两套互不干扰。
+>
+> **输入钳制**：带主题词的三条 krea2 路由都挂了流水线覆盖层，第 0 条即「你在消息里给的人物 / 环境 / 动作 / 事件要素，必须作为主体、背景与事件内容写进提示词」，不会被模型自选的主题替换。
+>
+> **anima 的两个预算档**：平时两段合计目标 ≤ 300 token（精简口径）；需求里点名「神态生动」「细致场景」「构图饱满」「场景细节充分」时，放宽到 ≤ 480 token 抽更多神态 / 物品 / 环境 tag——两档都远低于 anima 1.0 base 的 512 token 硬上限。
 
 **想临时换模型**：在 `zml_model_key.json` 里多加几个指向同一个桥地址、只是 `model` 不同的 preset，然后在 ComfyUI 面板切换即可——不用改配置、不用重启桥。
 
@@ -293,8 +308,11 @@ LoadImage / DanbooruGallery
 |---|---|---|
 | **`anima-tagger`** | 反推 / 创作 / **扩写**三分支，含格式硬规则、槽位顺序、禁用清单 | **主线**：tag → 三段式长稿；带图时做反推 |
 | **`anima-n-prompt`** | 中文场景 → 提示词 的整套生成框架（ROLE / 输出协议 / 互斥表 / 槽位 / 场景决策树） | anima / sdxl 场景 |
+| **`krea2-prompt`** | Krea2 自然语言规则库：巨物流（巨怪 / 克苏鲁 / 巨构 / 有机巨物）、参考流（图文海报）、随机流，共 23 份规则 | krea2 自然语言场景（`krea2 巨构` 等） |
 
-两者都放在 `skills_dir` 指向的目录下，桥按场景声明和 `bridge_config.json` 的 `routes` 路由。
+三者都放在 `skills_dir` 指向的目录下，桥按场景声明和 `bridge_config.json` 的 `routes` 路由。
+
+> ⚠️ 这三个 skill **都不随仓库分发**：`anima-tagger` / `anima-n-prompt` 来自第三方项目与群友分享，`krea2-prompt` 是本地整理的特有资产（含群友分享的规则集）。仓库只发纯工具——桥本体、路由脚本、校验节点与文档。缺哪个 skill，对应路由只会报缺文件、拿不到规则。
 
 **改规则不用改 ComfyUI**：直接编辑 skill 目录里的 `.md` 文件即可，桥按文件修改时间自动重载（改 `bridge_config.json` 才需要重启桥）。
 

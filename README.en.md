@@ -103,11 +103,13 @@ The `system_prompt` field takes **one short line**; the bridge fills in the rest
 
 | What you want | `system_prompt` |
 |---|---|
-| **Krea2 long-form expansion** (most common) | `krea2` |
-| Krea2 with an image | `krea2`, and wire the image to `input_image` |
-| Minimax | `minimax` |
-| Anima scene | `anima` |
-| SDXL scene | `sdxl` |
+| **Krea2 long-form expansion** (most common, tag style) | `krea2 扩写` |
+| Krea2 with an image | `krea2 扩写`, and wire the image to `input_image` |
+| **Krea2 natural language** (colossal / poster / random) | `krea2 megastructure`, `krea2 poster`, `krea2 random` |
+| Krea2 natural language with an image | same declaration, wire the image to `input_image` (the image is a scale / style reference, never reverse-tagged) |
+| Minimax | `minimax 扩写` |
+| Anima scene | `anima 扩写` (two parts: tag stream ＋ natural language, hard 512-token cap) |
+| SDXL scene | `sdxl 扩写` (same two-part shape) |
 | Leave empty | falls back to the default route |
 
 Matching is keyword-based on the declaration, longest match wins, so `krea2`, `krea2 expand`
@@ -149,7 +151,8 @@ For the full plugin/node list, see "Plugins used" at the top.
 - Python 3.8+ — the interpreter bundled with ComfyUI is fine. The bridge uses
   **only the standard library, zero dependencies**
 - An OpenAI-compatible LLM endpoint (local gateway, self-hosted proxy, or any cloud API)
-- The `anima-tagger` and `anima-n-prompt` skills — **not included in this repo**, see section 7
+- The skills (`anima-tagger`, `anima-n-prompt`, `krea2-prompt`) — **not included in this repo**;
+  they are third-party or local-only assets, fetch them yourself (section 7)
 
 ---
 
@@ -166,13 +169,17 @@ skill-bridge/
 ├─ bridge/
 │  ├─ dsh_skill_bridge.py         the bridge itself (standard library only)
 │  ├─ bridge_config.json          upstream URL, key, scene routes, shared override layer
-│  ├─ start-bridge.bat                  double-click to start (Windows)
+│  ├─ start-bridge.bat            double-click to start (Windows)
+│  ├─ add_krea2_routes.py         register / dry-run the three krea2-prompt routes (`--check`)
+│  ├─ fix_anima_routes.py         attach the "two-part + 512-token cap" override to anima routes
 │  └─ zml_model_key.json          ZML preset file (holds the API key)
 ├─ plugins/
 │  └─ comfyui-anima-validate-node/  the "Anima 提示词校验" node
-└─ reference/                           for people who prefer not to use the bridge
+├─ updates/                       incremental patches (skip the full re-download)
+│  └─ 2026-10-10-anima-krea2.md   anima two-part output + krea2 natural-language routes
+└─ reference/                     for people who prefer not to use the bridge
    ├─ krea2_pipeline_system_prompt.txt  static rules for direct mode
-   └─ krea2_wiring.md                Krea2 Control wiring reference (Chinese)
+   └─ krea2_wiring.md             Krea2 Control wiring reference (Chinese)
 ```
 
 > ⚠️ **No skill content is bundled.** The rules come from `anima-tagger` and
@@ -310,11 +317,28 @@ The `system_prompt` field takes **one line**. The bridge matches keywords, longe
 
 | Declaration | Skill loaded | Suits |
 |---|---|---|
-| `krea2` | anima-tagger · expansion branch | krea2 long form |
-| `anima` | anima-n-prompt · framework rules | anima scenes |
-| `sdxl` | anima-n-prompt · framework rules | sdxl scenes |
-| `minimax` | anima-tagger · expansion branch | minimax |
+| `krea2 扩写` | anima-tagger · expansion branch | krea2 tag-style long form |
+| `krea2 megastructure` / `krea2 colossal` / `krea2 kaiju` / `krea2 cthulhu` | krea2-prompt · colossal set (6 files) | colossal subjects (photoreal, one English paragraph) |
+| `krea2 poster` / `krea2 typography` | krea2-prompt · poster set (8 files) | poster-style graphic design from your text / image reference |
+| `krea2 random` / `krea2 random poster` | krea2-prompt · random set (9 files) | no reference — the model invents the subject |
+| `anima 扩写` | anima-n-prompt · tag-stream framework | anima scenes (two parts: tag stream ＋ natural language, hard 512-token cap) |
+| `sdxl 扩写` | anima-n-prompt · tag-stream framework | sdxl scenes (same two-part shape) |
+| `minimax 扩写` | minimax-h3-video-prompt | video prompts (bring that skill yourself) |
 | empty | default route | — |
+
+Chinese aliases work just as well: `krea2 巨构`, `krea2 图文海报`, `krea2 随机` route identically.
+Matching is keyword-based with longest-alias-wins, so the three natural-language routes never
+steal traffic from a plain `krea2`.
+
+> **Input clamping**: the three natural-language routes carry their own pipeline override whose
+> rule 0 says that any character / environment / action / event you supply **must** land in the
+> prompt as the subject, background and event — the model may not swap in a subject of its own
+> choosing.
+>
+> **Two anima budgets**: normally the two parts target ≤ 300 tokens. If your request asks for
+> "vivid expression", "detailed scene", "full composition" or "rich scene detail", the cap is
+> relaxed to ≤ 480 tokens so more expression / prop / environment tags can be pulled in. Both
+> budgets sit far below the 512-token hard cap of anima 1.0 base.
 
 Routing keys live in `bridge_config.json` under `routes`, so adding a base model means adding
 one entry there — not touching the workflow.
@@ -327,9 +351,16 @@ one entry there — not touching the workflow.
 |---|---|---|
 | **`anima-tagger`** | three branches (reverse-tagging / creation / **expansion**), with hard format rules, slot order, banned-term list | **main path**: tag → three-part long form; also does reverse-tagging when an image is attached |
 | **`anima-n-prompt`** | full generation framework for Chinese scene descriptions → prompt (role / output protocol / mutual-exclusion table / slots / scene decision tree) | anima and sdxl scenes |
+| **`krea2-prompt`** | krea2 natural-language rule library: colossal set (kaiju / Cthulhu / megastructure / organic colossus), poster set (graphic posters), random set — 23 rule files | krea2 natural-language scenes (`krea2 megastructure` etc.) |
 
-Both live under `skills_dir`; the bridge routes by scene declaration and the `routes` table in
+All three live under `skills_dir`; the bridge routes by scene declaration and the `routes` table in
 `bridge_config.json`.
+
+> ⚠️ None of the three skills ship with this repo: `anima-tagger` / `anima-n-prompt` come from
+> third-party projects and community shares, `krea2-prompt` is a local-only asset (built from a
+> rule set shared in our community). This repo ships **tools only** — the bridge, the route
+> scripts, the validation node and the docs. A missing skill simply makes its route report
+> missing files and hand nothing to the model.
 
 **Rule changes need no ComfyUI edits**: edit the `.md` files in the skill folder and the
 bridge picks them up by modification time (only `bridge_config.json` needs a restart… which

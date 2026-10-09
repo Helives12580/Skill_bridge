@@ -137,12 +137,22 @@ def read_cached(path):
 
 
 def pick_route(user_system, routes, default_route):
-    """场景关键词命中哪个就用哪个；命中最长者优先，避免 'anima' 抢走 'anima3'。"""
+    """场景关键词命中哪个就用哪个；命中最长者优先，避免 'anima' 抢走 'anima3'。
+
+    route 的 key 可用 | 分隔多个别名（如 'minimax|minimax fl2va|minimax帧锚定模式'）：
+    任一别名命中即算该 route 命中，比较长度时取实际命中的那个别名。
+    这样同一份场景配置可以挂多个触发词，不必复制整块配置。
+    """
     lowered = (user_system or "").lower()
-    hits = [k for k in routes if k.lower() in lowered]
-    if not hits:
+    best, best_len = None, 0
+    for k in routes:
+        for alias in str(k).split("|"):
+            alias = alias.strip().lower()
+            if alias and alias in lowered and len(alias) > best_len:
+                best, best_len = k, len(alias)
+    if best is None:
         return default_route, None
-    return max(hits, key=len), None
+    return best, None
 
 
 def has_image(messages):
@@ -212,7 +222,10 @@ def build_system_prompt(cfg, user_system, with_image=False, user_text=""):
     skill_dir = os.path.join(cfg["skills_dir"], route["skill"])
     parts, missing = [], []
 
-    overrides = (cfg.get("pipeline_overrides") or "").strip()
+    # 覆盖层可以按路由单独写（route 级优先），缺省回落全局配置。
+    # 图像流程（tag 流 + 三段式长稿）与视频流程（单段官方格式）的形态要求完全不同，
+    # 用一个全局覆盖层没法同时伺候两边。
+    overrides = (route.get("pipeline_overrides") or cfg.get("pipeline_overrides") or "").strip()
     if overrides:
         parts.append(overrides)
 
@@ -236,10 +249,15 @@ def build_system_prompt(cfg, user_system, with_image=False, user_text=""):
         else:
             parts.append("# ===== 参考：%s =====\n%s" % (ref, text))
 
+    # 同上：带图说明也支持 route 级覆盖（视频场景里图是首帧，不是 ControlNet 控制图）。
     if image_only:
-        parts.append(cfg.get("image_guidance_image_only") or DEFAULT_IMAGE_GUIDANCE_IMAGE_ONLY)
+        parts.append(route.get("image_guidance_image_only")
+                     or cfg.get("image_guidance_image_only")
+                     or DEFAULT_IMAGE_GUIDANCE_IMAGE_ONLY)
     elif with_image and has_tags:
-        parts.append(cfg.get("image_guidance_with_tags") or DEFAULT_IMAGE_GUIDANCE_WITH_TAGS)
+        parts.append(route.get("image_guidance_with_tags")
+                     or cfg.get("image_guidance_with_tags")
+                     or DEFAULT_IMAGE_GUIDANCE_WITH_TAGS)
 
     if (user_system or "").strip():
         parts.append("# ===== 本次场景声明（优先级最高）=====\n%s" % user_system.strip())

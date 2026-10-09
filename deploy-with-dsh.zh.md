@@ -16,7 +16,7 @@
 你正在帮用户部署 **skill-bridge** —— 一个本地小服务，把 AI skill 的规则动态喂给 ComfyUI 的 LLM 节点。
 本文件与你同处一个目录，同目录下应有 `bridge/`、`plugins/`、`README.md`。
 
-**注意：本仓库不含 skill 本体**——`anima-tagger` 与 `anima-n-prompt` 需要先自行获取。
+**注意：本仓库不含 skill 本体**——`anima-tagger`、`anima-n-prompt`、`krea2-prompt` 都需要先自行获取（第三方或本地特有资产，仓库只发纯工具）。
 
 **目标**：部署完成并**实测通过**，最后向用户报告结果。不要只做一半就交付。
 
@@ -114,7 +114,7 @@ Invoke-RestMethod -Uri "<baseURL>/models" -Headers $h | ConvertTo-Json -Depth 4
 ## 第 3 步 · 放置 skill 与插件
 
 ```powershell
-# ① skill 不随本仓库分发：确认 anima-tagger 与 anima-n-prompt 已在 DSH 的 skill 目录
+# ① skill 不随本仓库分发：确认需要的 skill 已在 DSH 的 skill 目录（anima-tagger / anima-n-prompt / krea2-prompt）
 #    （没有的话先去获取它们，桥默认也从这里读）
 Get-ChildItem "$env:USERPROFILE\.dsh\skills" -Directory | Select-Object -ExpandProperty Name
 
@@ -126,7 +126,7 @@ Copy-Item "<包路径>\plugins\comfyui-anima-validate-node" "<ComfyUI目录>\cus
 
 ```powershell
 Get-ChildItem "$env:USERPROFILE\.dsh\skills" -Directory | Select-Object -ExpandProperty Name
-# 应该能看到 anima-tagger 和 anima-n-prompt
+# 应该能看到 anima-tagger 和 anima-n-prompt（有 krea2-prompt 也会列出；缺它只影响 krea2 自然语言那三条路由）
 ```
 
 **提醒用户**：校验节点需要**重启 ComfyUI** 才会出现，这一步你代替不了。
@@ -172,6 +172,7 @@ print('前 200 字:', c[:200])
 - 正文长度 = 0 → 看桥日志里的 `思考=` 字段，若该值接近 max_tokens，就是预算不够，把 `max_tokens` 调到 8192 再试
 - 报 502 且提到 `api_key 不可用` → 第 2 步的密钥没填对
 - 连不上 → 看 `bridge\bridge.log` 最后几行
+- **形态判定（再发一次 `anima 扩写`）**：正文应是「tag 流 ＋ 空行 ＋ 自然语言」两段，总长几百字符。若出现三段式长稿、七层小标题或 `[SUBJECT]` 分块，说明那条 route 的 `pipeline_overrides` 没生效——拿 `bridge_config.json` 里 anima 路由的覆盖层对照一下（旧版没有这个字段，需要按 `updates/` 里的补丁更新）
 
 **③ 看日志确认路由命中**：
 
@@ -189,7 +190,7 @@ Get-Content "<包路径>\bridge\bridge.log" -Tail 8 -Encoding UTF8
 
 1. **探到什么**：python 路径、LLM 服务地址、模型、skill 目录、ComfyUI 目录
 2. **改了什么**：`bridge_config.json` 的三个字段
-3. **放了什么**：校验节点进 `custom_nodes`；并确认两个 skill 已在 `~/.dsh/skills`
+3. **放了什么**：校验节点进 `custom_nodes`；并确认三个 skill 中实际存在的那些已在 `~/.dsh/skills`
 4. **实测结果**：正文长度多少、桥日志那一行长什么样
 5. **用户接下来要做**：
    - 重启 ComfyUI（校验节点才会出现）
