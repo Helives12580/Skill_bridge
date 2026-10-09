@@ -13,6 +13,8 @@ import re
 import subprocess
 import sys
 
+# 分发版用 expanduser 而不是硬编码路径：等价于本机的 C:\Users\<你>\.dsh\skills\anima-tagger，
+# 但不会把某个具体用户的目录带进公开仓库（本地 live 那份仍是硬编码，从 live 同步回来时注意保留本行）。
 DEFAULT_SKILL_DIR = os.path.join(os.path.expanduser("~"), ".dsh", "skills", "anima-tagger")
 VALIDATOR_REL = os.path.join("tools", "anima_validate.py")
 
