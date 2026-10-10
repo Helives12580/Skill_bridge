@@ -484,6 +484,24 @@ of ideas, drawing several phrasings from one tag set — the cache gets in the w
 
 ---
 
+### Random requests skip the cache (`cache.bypass_keywords`)
+
+The reply cache is keyed on system + user text + model + token budget — **unchanged inputs replay the
+previous reply**. That is exactly wrong for "give me something random": the declaration and the user
+text stay the same, so the output gets pinned to one cached variant.
+
+So there is a bypass: **if the scene declaration or the user text contains `随机` or `random`, the
+cache is skipped** and the request always hits the upstream. The word list lives in
+`cache.bypass_keywords` (defaults to `["随机", "random"]` when unset; set it to `[]` to disable the
+bypass).
+
+> Only the declaration and user text you send are scanned — **never the assembled system**, which is
+> full of the word "random" in the skill rules and would disable the cache entirely. A bypassed
+> request logs `命中「随机」：跳过缓存，直接请求上游` and is **not stored** either, so it never takes
+> a slot from `max_entries`.
+
+---
+
 ## 9. FAQ
 
 **ComfyUI reports "empty response"**

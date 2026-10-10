@@ -38,6 +38,24 @@ _reply_cache = collections.OrderedDict()
 _cache_guard = threading.Lock()
 
 
+# 随机类请求不该吃缓存：用户要的就是「每次都不一样」，回放同一份等于把随机流废掉。
+# 只扫调用方传来的场景声明与用户文本——**不扫最终组装的 system**，因为 skill 规则里
+# 满篇「随机 / random」，扫它等于把缓存整个关掉。词表见 config 的 cache.bypass_keywords。
+DEFAULT_CACHE_BYPASS_KEYWORDS = ("随机", "random")
+
+
+def matched_cache_bypass(user_system, user_text, ccfg):
+    """命中随机类关键词就返回那个词，否则 None。"""
+    keywords = ccfg.get("bypass_keywords", DEFAULT_CACHE_BYPASS_KEYWORDS)
+    if not keywords:
+        return None
+    blob = ((user_system or "") + "\n" + (user_text or "")).lower()
+    for kw in keywords:
+        if kw and kw.lower() in blob:
+            return kw
+    return None
+
+
 def cache_key(system_prompt, user_text, model, max_tokens, image_fingerprint=""):
     blob = "\x00".join([system_prompt or "", user_text or "", model or "",
                         str(max_tokens), image_fingerprint])
@@ -442,17 +460,23 @@ class Handler(BaseHTTPRequestHandler):
 
         ccfg = cfg.get("cache") or {}
         ck = None
+        bypass = None
         if ccfg.get("enabled"):
-            fp = image_fingerprint(user_msgs) if ccfg.get("include_image_in_key") else ""
-            ck = cache_key(system_prompt, user_text, model, req_mt, fp)
-            hit = cache_lookup(ck)
-            if hit is not None:
-                content, usage = hit
-                log("场景=%s  输入=%s  分支=%s  模型=%s  命中缓存  直接回放 %d 字"
-                    "（未调用上游；缓存共 %d 条）"
-                    % (route_key, inp, branch, model, len(content), cache_size()))
-                self._reply(content, usage, payload, cfg)
-                return
+            bypass = matched_cache_bypass(user_system, user_text, ccfg)
+            if bypass:
+                log("场景=%s  输入=%s  分支=%s  模型=%s  命中「%s」：跳过缓存，直接请求上游"
+                    % (route_key, inp, branch, model, bypass))
+            else:
+                fp = image_fingerprint(user_msgs) if ccfg.get("include_image_in_key") else ""
+                ck = cache_key(system_prompt, user_text, model, req_mt, fp)
+                hit = cache_lookup(ck)
+                if hit is not None:
+                    content, usage = hit
+                    log("场景=%s  输入=%s  分支=%s  模型=%s  命中缓存  直接回放 %d 字"
+                        "（未调用上游；缓存共 %d 条）"
+                        % (route_key, inp, branch, model, len(content), cache_size()))
+                    self._reply(content, usage, payload, cfg)
+                    return
 
         started = time.time()
         result, error = forward(cfg, messages, payload, model)
